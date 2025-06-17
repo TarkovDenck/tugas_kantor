@@ -6,6 +6,8 @@
         <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">Dashboard</a>
         <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">Request</a>
         <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">History Request</a>
+        <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">Change Password</a>
+        <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">Manage User Profile</a>
         <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">Users</a>
         <a href="#" class="block px-4 py-2 rounded hover:bg-indigo-700">admin</a>
 
