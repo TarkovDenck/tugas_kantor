@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+
+    'firebase' => [
+        'credentials_file' => base_path('config/firebase_credentials.php'),
+    ],
+
 ];

@@ -2,6 +2,41 @@
 
 use Illuminate\Support\Facades\Route;
 
+use Kreait\Laravel\Firebase\Facades\Firebase;
+
+Route::get('/test-firebase', function () {
+    try {
+        $database = Firebase::database();
+
+        // Tulis data dummy
+        $database->getReference('testing')->set([
+            'status' => 'Firebase berhasil terhubung 🎉',
+            'timestamp' => now()->toDateTimeString()
+        ]);
+
+        // Ambil kembali datanya
+        $data = $database->getReference('testing')->getValue();
+
+        // Pastikan data dalam bentuk array
+        if (!is_array($data)) {
+            $data = ['value' => $data];
+        }
+
+        return response()->json([
+            'message' => 'Firebase berhasil terhubung',
+            'data' => $data
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Firebase GAGAL terhubung',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+
+
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -33,3 +68,12 @@ Route::get('/profile', function () {
 Route::get('/profile-user', function () {
     return view('pages/admin-userprofile');
 })->name('profileacctuser');
+
+Route::get('/admin', function () {
+    return view('pages/admin');
+})->name('admindashboard');
+
+
+Route::get('/log-in', function () {
+    return view('login');
+})->name('loginuser');
