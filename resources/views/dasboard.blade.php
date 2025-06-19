@@ -59,7 +59,7 @@
         Refresh Data
     </button>
 </div>
-<div class="bg-white rounded-lg shadow-lg p-6 mt-6 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300">
+{{-- <div class="bg-white rounded-lg shadow-lg p-6 mt-6 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300">
     <div>
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-gray-700">Total Users</h2>
@@ -79,6 +79,6 @@
     <button class="mt-4 text-sm text-white bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-md w-full">
         Refresh Data
     </button>
-</div>
+</div> --}}
 
 @endsection
