@@ -8,15 +8,16 @@
         <a href="{{ route('history') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">History Request</a>
         <a href="{{ route('changepassword') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Change Password</a>
         <a href="{{ route('profileacctuser') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Manage User Profile</a>
-        <a href="{{ route('users') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Users</a>
+        <a href="{{ route('user.management') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Users Management</a>
+        <a href="{{ route('project.management') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Project Management</a>
         <a href="{{ route('admindashboard') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Admin</a>
     </nav>
     <div class="p-4 border-t border-indigo-700">
-        <form method="POST" action="">
+        {{-- <form method="POST" action="">
             @csrf
             <button type="submit" class="w-full px-4 py-2 bg-red-600 rounded hover:bg-red-700">
                 Logout
             </button>
         </form>
-    </div>
+    </div> --}}
 </aside>

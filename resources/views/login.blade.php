@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Login - App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -11,15 +11,26 @@
     <div class="w-full max-w-md bg-white p-8 rounded shadow-lg">
         <h2 class="text-2xl font-bold text-center text-gray-700 mb-6">Login to Your Account</h2>
 
-        <form method="POST" action="#">
-            {{-- CSRF Token (optional if using backend) --}}
-            {{-- @csrf --}}
+        <!-- Display validation errors -->
+        @if($errors->any())
+            <div class="mb-4">
+                <ul class="text-sm text-red-600 list-disc pl-5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('loginuser') }}">
+            @csrf
 
             <!-- User ID -->
             <div class="mb-4">
                 <label class="block text-sm text-gray-600 mb-1" for="user_id">User ID</label>
                 <input type="text" id="user_id" name="user_id" required
-                       class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                       class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       value="{{ old('user_id') }}">
             </div>
 
             <!-- Password -->
