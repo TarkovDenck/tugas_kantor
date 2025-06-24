@@ -1,5 +1,6 @@
 @extends('layouts.app')
 
+
 @section('content')
 <div class="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-lg">
     <h2 class="text-2xl font-bold mb-6 text-gray-700">Request Page</h2>

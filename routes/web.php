@@ -220,192 +220,332 @@ Route::middleware(['check.session'])->group(function () {
         return view('dasboard');
     })->name('dashboard');
 
+
+
+
+
+
+
+
+
+
+
     Route::get('/request', function () {
         return view('pages/request');
     })->name('request');
+
+    Route::get('/request-edit', function () {
+        return view('pages/edit-request');
+    })->name('request-edit');
+
+
+
+
+
+
+
+
+
+
+
 
     Route::get('/history', function () {
         return view('pages/historyreq');
     })->name('history');
 
+
+
+
     Route::get('/change', function () {
         return view('pages/changepw');
     })->name('changepassword');
+
+    Route::post('/change-password', function (Request $request) {
+        $request->validate([
+            'old_password' => 'required|string',
+            'new_password' => 'required|string|confirmed|min:6',
+        ]);
+
+        $userId = Session::get('user_id');
+        if (!$userId) {
+            return back()->with('error', 'User not logged in.');
+        }
+
+        $database = Firebase::database();
+        $userRef = $database->getReference('users/' . $userId);
+        $userData = $userRef->getValue();
+
+        if (!$userData) {
+            return back()->with('error', 'User not found.');
+        }
+
+        if (!Hash::check($request->old_password, $userData['password'])) {
+            return back()->with('error', 'Old password is incorrect.');
+        }
+
+        $userRef->update([
+            'password' => Hash::make($request->new_password),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        return back()->with('success', 'Password changed successfully.');
+    })->name('changepassword.submit');
+
+
+
+
+
 
     Route::get('/profile', function () {
         return view('pages/profile');
     })->name('profileacct');
 
-    Route::get('/profile-user', function () {
-        return view('pages/admin-userprofile');
-    })->name('profileacctuser');
-
-    Route::get('/admin', function () {
-        return view('pages/admin');
-    })->name('admindashboard');
-
-    
-
-    Route::get('/project-management', function () {
-        $database = Firebase::database();
-        $projects = $database->getReference('projects')->getValue();
-
-        return view('pages.project', [
-            'projects' => $projects ?? []
-        ]);
-    })->name('project.management');
-
-    Route::post('/project-add', function (Request $request) {
-        $request->validate([
-            'project_id' => 'required|string',
-            'project_name' => 'required|string',
-        ]);
-
-        $projectId = $request->input('project_id');
-        $projectName = $request->input('project_name');
-        $now = now()->toDateTimeString();
-
-        $database = Firebase::database();
-        $ref = $database->getReference('projects/' . $projectId);
-
-        $ref->set([
-            'project_id' => $projectId,
-            'project_name' => $projectName,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        return redirect()->route('project.management')->with('success', 'Project saved!');
-    })->name('project.add');
-
-    Route::post('/project-edit/{id}', function (Request $request, $id) {
-        $request->validate([
-            'project_id' => 'required|string',
-            'project_name' => 'required|string',
-            'old_project_id' => 'required|string',
-        ]);
-
-        $newId = $request->input('project_id');
-        $name = $request->input('project_name');
-        $oldId = $request->input('old_project_id');
-        $now = now()->toDateTimeString();
-
-        $database = Firebase::database();
-
-        // Hapus yang lama jika ID-nya berubah
-        if ($oldId !== $newId) {
-            $database->getReference('projects/' . $oldId)->remove();
-        }
-
-        // Simpan baru (overwrite jika ID tetap sama)
-        $database->getReference('projects/' . $newId)->set([
-            'project_id' => $newId,
-            'project_name' => $name,
-            'updated_at' => $now,
-            'created_at' => now()->toDateTimeString(), // optional
-        ]);
-
-        return redirect()->route('project.management')->with('success', 'Project updated!');
-    })->name('project.edit');
-
-    Route::delete('/project-delete/{id}', function ($id) {
-        $database = Firebase::database();
-        $ref = $database->getReference('projects/' . $id);
-        $ref->remove();
-
-        return redirect()->route('project.management')->with('success', 'Project deleted!');
-    })->name('project.delete');
-    
 
 
 
 
+    Route::middleware(['check.session', 'check.admin'])->group(function () {    
 
-
-    
-
-    Route::get('/user-management', function () {
-        try {
+        Route::get('/profile-user', function () {
             $database = Firebase::database();
-            $users = $database->getReference('users')->getValue();
 
-            return view('pages.users', [
-                'users' => $users ?? []
+            $users = $database->getReference('users')->getValue() ?? [];
+            $profiles = $database->getReference('profiles')->getValue() ?? [];
+            $projects = $database->getReference('projects')->getValue() ?? [];
+
+            $result = [];
+            foreach ($users as $userId => $user) {
+                $profile = $profiles[$userId] ?? [
+                    'project' => 'Unknown',
+                    'project_id' => 'Unknown',
+                    'created_at' => '-',
+                    'updated_at' => '-',
+                ];
+
+                $result[] = [
+                    'user_id' => $userId,
+                    'project' => $profile['project'],
+                    'project_id' => $profile['project_id'],
+                    'created_at' => $profile['created_at'],
+                    'updated_at' => $profile['updated_at'],
+                ];
+            }
+
+            return view('pages.admin-userprofile', [
+                'profiles' => $result,
+                'projects' => $projects ?? [],
             ]);
-        } catch (\Exception $e) {
-            return view('pages.users', [
-                'users' => [],
-                'error' => $e->getMessage()
+        })->name('profileacctuser');
+
+
+        Route::post('/update-profile', function (Request $request) {
+            $request->validate([
+                'user_id' => 'required|string',
+                'project' => 'required|string',
+                'project_id' => 'required|string',
             ]);
-        }
-    })->name('user.management');
 
-    Route::post('/add-user', function (Request $request) {
-        $request->validate([
-            'user_id' => 'required|string',
-            'password' => 'required|string',
-            'role' => 'required|string'
-        ]);
+            $userId = $request->input('user_id');
+            $project = $request->input('project');
+            $projectId = $request->input('project_id');
+            $now = now()->toDateTimeString();
 
-        $userId = $request->input('user_id');
-        $password = $request->input('password');
-        $role = $request->input('role');
-
-        $now = now()->toDateTimeString();
-
-        try {
             $database = Firebase::database();
-            $ref = $database->getReference("users/$userId");
+            $profileRef = $database->getReference("profiles/{$userId}");
+
+            $existing = $profileRef->getValue();
+            $createdAt = $existing['created_at'] ?? $now;
+
+            $profileRef->set([
+                'user_id' => $userId,
+                'project' => $project,
+                'project_id' => $projectId,
+                'created_at' => $createdAt,
+                'updated_at' => $now,
+            ]);
+
+            return redirect()->route('profileacctuser')->with('success', 'Profile updated!');
+        })->name('profile.update');
+
+
+
+
+
+
+
+
+
+
+
+
+        Route::get('/admin', function () {
+            return view('pages/admin');
+        })->name('admindashboard');
+
+        
+
+        Route::get('/project-management', function () {
+            $database = Firebase::database();
+            $projects = $database->getReference('projects')->getValue();
+
+            return view('pages.project', [
+                'projects' => $projects ?? []
+            ]);
+        })->name('project.management');
+
+        Route::post('/project-add', function (Request $request) {
+            $request->validate([
+                'project_id' => 'required|string',
+                'project_name' => 'required|string',
+            ]);
+
+            $projectId = $request->input('project_id');
+            $projectName = $request->input('project_name');
+            $now = now()->toDateTimeString();
+
+            $database = Firebase::database();
+            $ref = $database->getReference('projects/' . $projectId);
 
             $ref->set([
-                'user_id' => $userId,
-                'password' => Hash::make($password),
-                'role' => $role,
+                'project_id' => $projectId,
+                'project_name' => $projectName,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
 
-            return redirect()->route('user.management')->with('success', 'User added successfully!');
-        } catch (\Exception $e) {
-            return redirect()->route('user.management')->with('error', $e->getMessage());
-        }
-    });
+            return redirect()->route('project.management')->with('success', 'Project saved!');
+        })->name('project.add');
 
-    
+        Route::post('/project-edit/{id}', function (Request $request, $id) {
+            $request->validate([
+                'project_id' => 'required|string',
+                'project_name' => 'required|string',
+                'old_project_id' => 'required|string',
+            ]);
 
-    Route::delete('/delete-user/{id}', function ($id) {
-        try {
+            $newId = $request->input('project_id');
+            $name = $request->input('project_name');
+            $oldId = $request->input('old_project_id');
+            $now = now()->toDateTimeString();
+
             $database = Firebase::database();
-            $ref = $database->getReference("users/$id");
+
+            // Hapus yang lama jika ID-nya berubah
+            if ($oldId !== $newId) {
+                $database->getReference('projects/' . $oldId)->remove();
+            }
+
+            // Simpan baru (overwrite jika ID tetap sama)
+            $database->getReference('projects/' . $newId)->set([
+                'project_id' => $newId,
+                'project_name' => $name,
+                'updated_at' => $now,
+                'created_at' => now()->toDateTimeString(), // optional
+            ]);
+
+            return redirect()->route('project.management')->with('success', 'Project updated!');
+        })->name('project.edit');
+
+        Route::delete('/project-delete/{id}', function ($id) {
+            $database = Firebase::database();
+            $ref = $database->getReference('projects/' . $id);
             $ref->remove();
 
-            return redirect()->route('user.management')->with('success', 'User deleted successfully!');
-        } catch (\Exception $e) {
-            return redirect()->route('user.management')->with('error', $e->getMessage());
-        }
-    })->name('user.delete');
+            return redirect()->route('project.management')->with('success', 'Project deleted!');
+        })->name('project.delete');
+        
 
-    Route::post('/edit-user/{user_id}', function (Request $request, $user_id) {
-        $request->validate([
-            'password' => 'required|min:6',
-        ]);
 
-        $database = Firebase::database();
-        $ref = $database->getReference('users/' . $user_id);
 
-        $user = $ref->getValue();
 
-        if (!$user) {
-            return redirect()->back()->with('error', 'User not found.');
-        }
 
-        $ref->update([
-            'password' => Hash::make($request->password),
-            'updated_at' => now()->toDateTimeString(),
-        ]);
 
-        return redirect()->back()->with('success', 'Password updated successfully.');
-    })->name('user.update');
+        
+
+        Route::get('/user-management', function () {
+            try {
+                $database = Firebase::database();
+                $users = $database->getReference('users')->getValue();
+
+                return view('pages.users', [
+                    'users' => $users ?? []
+                ]);
+            } catch (\Exception $e) {
+                return view('pages.users', [
+                    'users' => [],
+                    'error' => $e->getMessage()
+                ]);
+            }
+        })->name('user.management');
+
+        Route::post('/add-user', function (Request $request) {
+            $request->validate([
+                'user_id' => 'required|string',
+                'password' => 'required|string',
+                'role' => 'required|string'
+            ]);
+
+            $userId = $request->input('user_id');
+            $password = $request->input('password');
+            $role = $request->input('role');
+
+            $now = now()->toDateTimeString();
+
+            try {
+                $database = Firebase::database();
+                $ref = $database->getReference("users/$userId");
+
+                $ref->set([
+                    'user_id' => $userId,
+                    'password' => Hash::make($password),
+                    'role' => $role,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                return redirect()->route('user.management')->with('success', 'User added successfully!');
+            } catch (\Exception $e) {
+                return redirect()->route('user.management')->with('error', $e->getMessage());
+            }
+        });
+
+        
+
+        Route::delete('/delete-user/{id}', function ($id) {
+            try {
+                $database = Firebase::database();
+                $database->getReference("users/$id")->remove();
+                $database->getReference("profiles/$id")->remove();
+
+                return redirect()->route('user.management')->with('success', 'User deleted successfully!');
+            } catch (\Exception $e) {
+                return redirect()->route('user.management')->with('error', $e->getMessage());
+            }
+        })->name('user.delete');
+
+        Route::post('/edit-user/{user_id}', function (Request $request, $user_id) {
+            $request->validate([
+                'password' => 'required|min:6',
+            ]);
+
+            $database = Firebase::database();
+            $ref = $database->getReference('users/' . $user_id);
+
+            $user = $ref->getValue();
+
+            if (!$user) {
+                return redirect()->back()->with('error', 'User not found.');
+            }
+
+            $ref->update([
+                'password' => Hash::make($request->password),
+                'updated_at' => now()->toDateTimeString(),
+            ]);
+
+            return redirect()->back()->with('success', 'Password updated successfully.');
+        })->name('user.update');
+    
+    });
 
 
 
