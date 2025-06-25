@@ -8,6 +8,9 @@ use Illuminate\Support\Str;
 use App\Providers\RouteServiceProvider;
 use Kreait\Firebase\Factory;
 use Kreait\Laravel\Firebase\Facades\Firebase;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\View;
+
 
 Route::get('/test-firebase', function () {
     try {
@@ -230,13 +233,102 @@ Route::middleware(['check.session'])->group(function () {
 
 
 
+    
+
     Route::get('/request', function () {
-        return view('pages/request');
+        return view('pages.request');
     })->name('request');
 
-    Route::get('/request-edit', function () {
-        return view('pages/edit-request');
-    })->name('request-edit');
+    // Proses Simpan Request ke Firebase
+   Route::post('/request-store', function (Request $request) {
+        $request->validate([
+            'requests' => 'required|string',
+        ]);
+
+        $requests = json_decode($request->input('requests'), true);
+        $database = Firebase::database();
+        $ref = $database->getReference('requests');
+
+        $userId = session('user_id'); // ambil dari session
+
+        foreach ($requests as $req) {
+            $ref->push([
+                'user_id' => $userId, // tambahkan di sini
+                'request_type' => $req['requestType'],
+                'quantity' => $req['number'],
+                'hours' => $req['hours'],
+                'note' => $req['note'],
+                'created_at' => now()->toDateTimeString(),
+                'updated_at' => now()->toDateTimeString(),
+            ]);
+        }
+
+        return redirect()->route('request')->with('success', 'Data berhasil disimpan!');
+    })->name('request.store');
+
+
+
+
+
+
+
+
+    
+
+    // Route::get('/edit-request', function () {
+    //     return view('pages/edit-request');
+    // })->name('request-edit');
+
+   Route::get('/edit-request', function (Request $request) {
+        $database = Firebase::database();
+        $allRequests = $database->getReference('requests')->getValue() ?? [];
+
+        $from = $request->input('from');
+        $to = $request->input('to');
+
+        // Filter berdasarkan tanggal jika diisi
+        if ($from && $to) {
+            $filtered = [];
+            foreach ($allRequests as $key => $req) {
+                $createdAt = isset($req['created_at']) ? date('Y-m-d', strtotime($req['created_at'])) : null;
+
+                if ($createdAt && $createdAt >= $from && $createdAt <= $to) {
+                    $filtered[$key] = $req;
+                }
+            }
+            $requests = $filtered;
+        } else {
+            $requests = $allRequests;
+        }
+
+        return view('pages.edit-request', ['requests' => $requests]);
+    })->name('request.edit.view'); 
+
+   Route::post('/request-update', function (Request $request) {
+        $request->validate([
+            'request_id' => 'required|string',
+            'request_type' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+            'hours' => 'required|numeric',
+            'note' => 'nullable|string',
+            'user_id' => 'required|string',
+        ]);
+
+        $id = $request->input('request_id');
+        $database = Firebase::database();
+        $ref = $database->getReference('requests/' . $id);
+
+        $ref->update([
+            'request_type' => $request->input('request_type'),
+            'quantity' => $request->input('quantity'),
+            'hours' => $request->input('hours'),
+            'note' => $request->input('note'),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        return redirect()->route('request.edit.view')->with('success', 'Request updated!');
+    })->name('request.update');
+
 
 
 

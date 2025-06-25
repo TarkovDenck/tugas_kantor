@@ -1,20 +1,21 @@
 @extends('layouts.app')
 
-
 @section('content')
 <div class="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-lg">
     <h2 class="text-2xl font-bold mb-6 text-gray-700">Request Page</h2>
 
     <!-- Area tampil hasil request -->
-    <div id="request-list" class="space-y-4 mb-6">
-        <!-- Baris request akan muncul di sini -->
-    </div>
+    <div id="request-list" class="space-y-4 mb-6"></div>
 
     <!-- Tombol Insert -->
     <div class="mb-6">
-        <button onclick="insertRequests()" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition font-semibold">
-            INSERT
-        </button>
+        <form id="insertForm" method="POST" action="{{ route('request.store') }}">
+            @csrf
+            <input type="hidden" name="requests" id="hiddenRequests">
+            <button type="submit" onclick="prepareSubmission()" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition font-semibold">
+                INSERT
+            </button>
+        </form>
     </div>
 
     <!-- Form Request -->
@@ -128,18 +129,9 @@
         document.getElementById('add-update-btn').innerText = 'UPDATE';
     }
 
-    function insertRequests() {
-        if (requestData.length === 0) {
-            alert("Belum ada data yang ditambahkan.");
-            return;
-        }
-
-        console.log("Data siap dikirim:", requestData);
-        alert("Data berhasil dikumpulkan (simulasi insert).");
-
-        requestData = [];
-        renderRequests();
-        resetForm();
+    function prepareSubmission() {
+        const hiddenInput = document.getElementById('hiddenRequests');
+        hiddenInput.value = JSON.stringify(requestData);
     }
 
     function resetForm() {
