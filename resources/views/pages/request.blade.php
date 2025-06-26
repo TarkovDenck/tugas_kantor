@@ -4,6 +4,10 @@
 <div class="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-lg">
     <h2 class="text-2xl font-bold mb-6 text-gray-700">Request Page</h2>
 
+    @if(session('success'))
+        <div class="bg-green-100 text-green-800 p-3 mb-4 rounded">{{ session('success') }}</div>
+    @endif
+
     <!-- Area tampil hasil request -->
     <div id="request-list" class="space-y-4 mb-6"></div>
 

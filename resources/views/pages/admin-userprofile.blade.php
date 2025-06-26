@@ -9,37 +9,44 @@
     @endif
 
     <div class="overflow-x-auto">
-        <table class="min-w-full bg-white text-sm">
-            <thead class="bg-gray-200 text-gray-700">
+        <table class="min-w-full border border-gray-300 text-sm rounded-md bg-white">
+            <thead class="bg-gray-100 text-gray-600 font-semibold">
                 <tr>
-                    <th class="px-4 py-2 text-left">User ID</th>
-                    <th class="px-4 py-2 text-left">Project</th>
-                    <th class="px-4 py-2 text-left">Project ID</th>
-                    <th class="px-4 py-2 text-left">Created</th>
-                    <th class="px-4 py-2 text-left">Updated</th>
-                    <th class="px-4 py-2 text-left">Action</th>
+                    <th class="px-4 py-2 border">User ID</th>
+                    <th class="px-4 py-2 border">Project</th>
+                    <th class="px-4 py-2 border">Project ID</th>
+                    <th class="px-4 py-2 border">Created</th>
+                    <th class="px-4 py-2 border">Updated</th>
+                    <th class="px-4 py-2 border">Action</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($profiles as $profile)
+                @forelse ($profiles as $profile)
                     <tr>
-                        <td class="px-4 py-2">{{ $profile['user_id'] }}</td>
-                        <td class="px-4 py-2">{{ $profile['project'] }}</td>
-                        <td class="px-4 py-2">{{ $profile['project_id'] }}</td>
-                        <td class="px-4 py-2">{{ $profile['created_at'] }}</td>
-                        <td class="px-4 py-2">{{ $profile['updated_at'] }}</td>
-                        <td class="px-4 py-2">
-                            <button onclick="openEditModal('{{ $profile['user_id'] }}', '{{ $profile['project'] }}')" 
-                                    class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700">
+                        <td class="px-4 py-2 border border-gray-300">{{ $profile['user_id'] }}</td>
+                        <td class="px-4 py-2 border border-gray-300">{{ $profile['project'] }}</td>
+                        <td class="px-4 py-2 border border-gray-300">{{ $profile['project_id'] }}</td>
+                        <td class="px-4 py-2 border border-gray-300">{{ $profile['created_at'] }}</td>
+                        <td class="px-4 py-2 border border-gray-300">{{ $profile['updated_at'] }}</td>
+                        <td class="px-4 py-2 border border-gray-300 text-center">
+                            <button 
+                                onclick="openEditModal('{{ $profile['user_id'] }}', '{{ $profile['project'] }}')" 
+                                class="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 text-xs"
+                            >
                                 Edit
                             </button>
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-gray-500 italic border">No profile data found.</td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
 </div>
+
 
 <!-- Modal Edit -->
 <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">

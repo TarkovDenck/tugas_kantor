@@ -6,7 +6,7 @@
         <a href="{{ route('dashboard') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Dashboard</a>
         <a href="{{ route('request') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Request</a>
         <a href="{{ route('request.edit.view') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Edit Request</a>
-        <a href="{{ route('history') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">History Request</a>
+        <a href="{{ route('request.history') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">History Request</a>
         <a href="{{ route('changepassword') }}" class="block px-4 py-2 rounded hover:bg-indigo-700">Change Password</a>
         
 
