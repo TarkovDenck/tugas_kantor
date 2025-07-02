@@ -3,7 +3,11 @@
 
     <div class="flex items-center gap-4 text-sm text-gray-600">
         <div>
-            <span class="font-medium">User ID:</span> {{ session('user_id') ?? 'Guest' }} |
+            <span class="font-medium">User ID:</span>
+            <a href="{{ route('user.profile') }}" class="text-blue-600 hover:underline">
+                {{ session('user_id') ?? 'Guest' }}
+            </a> |
+            
             <span class="font-medium">Role:</span> {{ session('role') ?? '-' }}
         </div>
 

@@ -4,12 +4,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Str;
-use App\Providers\RouteServiceProvider;
-use Kreait\Firebase\Factory;
 use Kreait\Laravel\Firebase\Facades\Firebase;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\View;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 
 Route::get('/test-firebase', function () {
@@ -317,46 +315,80 @@ Route::middleware(['check.session'])->group(function () {
     })->name('request.store');
     
 
+    Route::get('/profile', function () {
+        $database = app('firebase.database');
+        $userId = session('user_id');
+
+        // Ambil data dari tabel profiles, bukan users
+        $profile = $database->getReference('profiles/' . $userId)->getValue() ?? [];
+
+        return view('pages.profile', [
+            'userId' => $userId,
+            'profile' => $profile
+        ]);
+    })->name('user.profile');
 
 
 
-  Route::get('/edit-request', function (Request $request) {
+    Route::get('/edit-request', function (Request $request) {
         $database = Firebase::database();
         $allRequests = $database->getReference('requests')->getValue() ?? [];
 
         $from = $request->input('from');
         $to = $request->input('to');
-        $sessionUserId = session('user_id'); // Ambil user ID dari session
+        $filterUser = $request->input('filter_user');
+        $sessionUserId = session('user_id');
+        $sessionRole = session('role');
 
         $filtered = [];
         $totalFilteredHours = 0;
+        $userIdsSet = [];
 
         foreach ($allRequests as $key => $req) {
             $createdAt = isset($req['created_at']) ? date('Y-m-d', strtotime($req['created_at'])) : null;
+            $reqUserId = $req['user_id'] ?? null;
 
-            if (
-                isset($req['user_id']) &&
-                $req['user_id'] === $sessionUserId &&
-                (!$from || !$to || ($createdAt && $createdAt >= $from && $createdAt <= $to))
-            ) {
+            if ($reqUserId) {
+                $userIdsSet[$reqUserId] = true; // collect unique user_id
+            }
+
+            $isAdmin = $sessionRole === 'admin';
+            $isOwner = $reqUserId === $sessionUserId;
+            $dateMatch = (!$from || !$to || ($createdAt && $createdAt >= $from && $createdAt <= $to));
+
+            $userMatch = $isAdmin
+                ? (!$filterUser || $reqUserId === $filterUser)
+                : $isOwner;
+
+            if ($dateMatch && $userMatch) {
                 $filtered[$key] = $req;
-
-                // Hitung total hours juga
                 if (isset($req['hours'])) {
                     $totalFilteredHours += floatval($req['hours']);
                 }
             }
         }
 
+        // Pagination
+        $page = $request->get('page', 1);
+        $perPage = 10;
+        $filteredCollection = new Collection($filtered);
+        $paginated = new LengthAwarePaginator(
+            $filteredCollection->forPage($page, $perPage)->all(),
+            $filteredCollection->count(),
+            $perPage,
+            $page,
+            ['path' => url()->current()]
+        );
+
         return view('pages.edit-request', [
-            'requests' => $filtered,
-            'totalHours' => $totalFilteredHours, // <- kirim ke blade
+            'requests' => $paginated,
+            'totalHours' => $totalFilteredHours,
+            'allUsers' => array_keys($userIdsSet), // <- kirim ke blade
         ]);
     })->name('request.edit.view');
 
 
-
-   Route::post('/request-update', function (Request $request) {
+    Route::post('/request-update', function (Request $request) {
         $request->validate([
             'request_id' => 'required|string',
             'request_type' => 'required|string',
@@ -379,7 +411,6 @@ Route::middleware(['check.session'])->group(function () {
             'updated_at' => now()->toDateTimeString(),
         ]);
 
-        // Tambahkan log update
         $logRef->push([
             'user_id' => $request->input('user_id'),
             'action' => 'update',
@@ -393,7 +424,7 @@ Route::middleware(['check.session'])->group(function () {
         return redirect()->route('request.edit.view')->with('success', 'Request updated!');
     })->name('request.update');
 
-    // Proses Delete Request
+
     Route::post('/request-delete', function (Request $request) {
         $request->validate([
             'request_id' => 'required|string',
@@ -404,12 +435,9 @@ Route::middleware(['check.session'])->group(function () {
         $ref = $database->getReference('requests/' . $id);
         $logRef = $database->getReference('request_logs');
 
-        // Ambil data sebelum dihapus
         $oldData = $ref->getValue();
-
         $ref->remove();
 
-        // Tambahkan log delete
         $logRef->push([
             'user_id' => $oldData['user_id'] ?? '-',
             'action' => 'delete',
@@ -435,64 +463,50 @@ Route::middleware(['check.session'])->group(function () {
 
 
 
-    Route::get('/history', function (Request $request) {
-        $database = Firebase::database();
-        $logs = $database->getReference('request_logs')->getValue() ?? [];
-
-        $userId = session('user_id');
-        $from = $request->input('from');
-        $to = $request->input('to');
-
-        $filteredLogs = [];
-
-        foreach ($logs as $key => $log) {
-            $logUserId = $log['user_id'] ?? null;
-            $timestamp = $log['timestamp'] ?? null;
-            $logDate = $timestamp ? date('Y-m-d', strtotime($timestamp)) : null;
-
-            if ($logUserId === $userId) {
-                if ($from && $to) {
-                    if ($logDate >= $from && $logDate <= $to) {
-                        $filteredLogs[$key] = $log;
-                    }
-                } else {
-                    $filteredLogs[$key] = $log;
-                }
-            }
-        }
-
-        return view('pages.historyreq', ['logs' => $filteredLogs]);
+    Route::get('/history', function () {
+        return redirect()->route('historyreq.view');
     })->name('request.history');
 
-    route::get('/history-request-log', function (Request $request) {
-        $from = $request->input('from');
-        $to = $request->input('to');
-        $userId = session('user_id');
-
+    Route::get('/history-request-log', function (Request $request) {
         $database = Firebase::database();
         $logs = $database->getReference('request_logs')->getValue() ?? [];
 
+        $sessionUserId = session('user_id');
+        $sessionRole = session('role');
+        $isAdmin = $sessionRole === 'admin';
+
+        $from = $request->input('from');
+        $to = $request->input('to');
+        $filterUser = $request->input('filter_user');
+
         $filteredLogs = [];
+        $userSet = [];
 
         foreach ($logs as $key => $log) {
-            if (!isset($log['date']) || !isset($log['user_id'])) {
-                continue;
-            }
+            $userId = $log['user_id'] ?? null;
+            $date = $log['date'] ?? null;
 
-            // Formatkan ke YYYY-MM-DD
-            $logDate = substr($log['date'], 0, 10);
+            if (!$userId || !$date) continue;
 
-            if ($log['user_id'] === $userId) {
-                if (!$from || !$to || ($logDate >= $from && $logDate <= $to)) {
-                    $filteredLogs[$key] = $log;
-                }
+            $logDate = substr($date, 0, 10); // ambil format Y-m-d
+            $userSet[$userId] = true;
+
+            $userMatch = $isAdmin
+                ? (!$filterUser || $userId === $filterUser)
+                : $userId === $sessionUserId;
+
+            $dateMatch = !$from || !$to || ($logDate >= $from && $logDate <= $to);
+
+            if ($userMatch && $dateMatch) {
+                $filteredLogs[$key] = $log;
             }
         }
 
         return view('pages.historyreq', [
             'logs' => $filteredLogs,
             'from' => $from,
-            'to' => $to
+            'to' => $to,
+            'allUsers' => array_keys($userSet),
         ]);
     })->name('historyreq.view');
 
@@ -544,9 +558,9 @@ Route::middleware(['check.session'])->group(function () {
 
 
 
-    Route::get('/profile', function () {
-        return view('pages/profile');
-    })->name('profileacct');
+    // Route::get('/profile', function () {
+    //     return view('pages/profile');
+    // })->name('profileacct');
 
 
 
@@ -792,10 +806,88 @@ Route::middleware(['check.session'])->group(function () {
 
             return redirect()->back()->with('success', 'Password updated successfully.');
         })->name('user.update');
+
+
+        Route::get('/admin-dashboard', function (Request $request) {
+            $database = app('firebase.database');
+
+            // Ambil semua request
+            $requests = $database->getReference('requests')->getValue() ?? [];
+
+            // Ambil semua user
+            $users = $database->getReference('users')->getValue() ?? [];
+            $totalUsers = count($users);
+
+            // Ambil parameter filter user (opsional)
+            $filterUser = $request->query('filter_user');
+
+            $totalHours = 0;
+            $totalRequests = 0;
+            $chartData = [];
+            $recentRequests = [];
+
+            $today = Carbon::now()->format('Y-m-d');
+
+            // Loop semua request
+            foreach ($requests as $req) {
+                $userId = $req['user_id'] ?? null;
+                $hours = isset($req['hours']) ? floatval($req['hours']) : 0;
+                $createdAt = $req['created_at'] ?? null;
+                $dateOnly = $createdAt ? substr($createdAt, 0, 10) : null;
+
+                // Jika pakai filter user, lewati jika bukan user yang diminta
+                if ($filterUser && $userId !== $filterUser) {
+                    continue;
+                }
+
+                // Akumulasi total
+                $totalHours += $hours;
+                $totalRequests++;
+
+                // Buat chart per hari
+                if ($dateOnly) {
+                    if (!isset($chartData[$dateOnly])) {
+                        $chartData[$dateOnly] = 0;
+                    }
+                    $chartData[$dateOnly] += $hours;
+                }
+
+                // Ambil recent request untuk hari ini saja
+                if ($dateOnly === $today) {
+                    $recentRequests[] = $req;
+                }
+            }
+
+            // Siapkan data chart
+            ksort($chartData); // sort berdasarkan tanggal
+            $chartLabels = array_keys($chartData);
+            $chartValues = array_values($chartData);
+
+            // Siapkan list user untuk dropdown filter
+            $allUsers = [];
+            foreach ($requests as $req) {
+                if (isset($req['user_id']) && !in_array($req['user_id'], $allUsers)) {
+                    $allUsers[] = $req['user_id'];
+                }
+            }
+
+            return view('pages.admin', [
+                'totalHours' => $totalHours,
+                'totalRequests' => $totalRequests,
+                'totalUsers' => $totalUsers,
+                'chartLabels' => $chartLabels,
+                'chartValues' => $chartValues,
+                'recentRequests' => $recentRequests,
+                'allUsers' => $allUsers,
+            ]);
+        })->name('admindashboard');
+
+
+
     
     });
 
-
-
+    
+    
 
 });

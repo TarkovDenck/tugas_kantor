@@ -9,7 +9,7 @@
     @endif
 
     <!-- Filter Tanggal -->
-    <form method="GET" action="{{ route('request.edit.view') }}" class="flex items-center gap-4 mb-6">
+    <form method="GET" action="{{ route('request.edit.view') }}" class="flex items-center gap-4 mb-6 flex-wrap">
         <div>
             <label class="text-sm">From</label>
             <input type="date" name="from" value="{{ request('from') }}" class="border px-2 py-1 rounded-md">
@@ -18,69 +18,90 @@
             <label class="text-sm">To</label>
             <input type="date" name="to" value="{{ request('to') }}" class="border px-2 py-1 rounded-md">
         </div>
+
+        @if (session('role') === 'admin')
+        <div>
+            <label class="text-sm">Filter User</label>
+            <select name="filter_user" class="border px-2 py-1 rounded-md">
+                <option value="">All Users</option>
+                @foreach($allUsers as $user)
+                    <option value="{{ $user }}" {{ request('filter_user') == $user ? 'selected' : '' }}>{{ $user }}</option>
+                @endforeach
+            </select>
+        </div>
+        @endif
+
         <div>
             <button type="submit" class="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700">Filter</button>
         </div>
     </form>
 
-<div class="overflow-x-auto mt-6">
-    <table class="min-w-full border border-gray-300 text-sm rounded-md bg-white">
-        <thead class="bg-gray-100 text-gray-600 font-semibold">
-            <tr>
-                <th class="px-4 py-2 border">#</th>
-                <th class="px-4 py-2 border">Request ID</th>
-                <th class="px-4 py-2 border">User ID</th>
-                <th class="px-4 py-2 border">Request Type</th>
-                <th class="px-4 py-2 border">Quantity</th>
-                <th class="px-4 py-2 border">Hours</th>
-                <th class="px-4 py-2 border">Note</th>
-                <th class="px-4 py-2 border">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($requests as $id => $request)
-                <tr>
-                    <td class="border px-4 py-2 text-center">{{ $loop->iteration }}</td>
-                    <td class="border px-4 py-2">{{ $id }}</td>
-                    <td class="border px-4 py-2">{{ $request['user_id'] }}</td>
-                    <td class="border px-4 py-2">{{ $request['request_type'] }}</td>
-                    <td class="border px-4 py-2">{{ $request['quantity'] }}</td>
-                    <td class="border px-4 py-2">{{ $request['hours'] }}</td>
-                    <td class="border px-4 py-2">{{ $request['note'] }}</td>
-                    <td class="border px-4 py-2 text-center">
-                        <div class="flex justify-center space-x-2">
-                            <button 
-                                class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs"
-                                onclick="openEditModal('{{ $id }}', '{{ $request['user_id'] }}', '{{ $request['request_type'] }}', '{{ $request['quantity'] }}', '{{ $request['hours'] }}', '{{ $request['note'] }}')"
-                            >
-                                Edit
-                            </button>
 
-                            <form method="POST" action="{{ route('request.delete') }}" onsubmit="return confirm('Are you sure you want to delete this request?');">
-                                @csrf
-                                <input type="hidden" name="request_id" value="{{ $id }}">
-                                <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs">
-                                    Delete
+    <div class="overflow-x-auto mt-6">
+        <table class="min-w-full border border-gray-300 text-sm rounded-md bg-white">
+            <thead class="bg-gray-100 text-gray-600 font-semibold">
+                <tr>
+                    <th class="px-4 py-2 border">#</th>
+                    <th class="px-4 py-2 border">Request ID</th>
+                    <th class="px-4 py-2 border">User ID</th>
+                    <th class="px-4 py-2 border">Request Type</th>
+                    <th class="px-4 py-2 border">Quantity</th>
+                    <th class="px-4 py-2 border">Hours</th>
+                    <th class="px-4 py-2 border">Note</th>
+                    <th class="px-4 py-2 border">Created At</th>
+                    <th class="px-4 py-2 border">Updated At</th>
+                    <th class="px-4 py-2 border">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($requests as $id => $request)
+                    <tr>
+                        <td class="border px-4 py-2 text-center">{{ $loop->iteration + (($requests->currentPage() - 1) * $requests->perPage()) }}</td>
+                        <td class="border px-4 py-2">{{ $id }}</td>
+                        <td class="border px-4 py-2">{{ $request['user_id'] }}</td>
+                        <td class="border px-4 py-2">{{ $request['request_type'] }}</td>
+                        <td class="border px-4 py-2">{{ $request['quantity'] }}</td>
+                        <td class="border px-4 py-2">{{ $request['hours'] }}</td>
+                        <td class="border px-4 py-2">{{ $request['note'] }}</td>
+                        <td class="border px-4 py-2">{{ $request['created_at'] ?? '-' }}</td>
+                        <td class="border px-4 py-2">{{ $request['updated_at'] ?? '-' }}</td>
+                        <td class="border px-4 py-2 text-center">
+                            <div class="flex justify-center space-x-2">
+                                <button 
+                                    class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs"
+                                    onclick="openEditModal('{{ $id }}', '{{ $request['user_id'] }}', '{{ $request['request_type'] }}', '{{ $request['quantity'] }}', '{{ $request['hours'] }}', '{{ $request['note'] }}')"
+                                >
+                                    Edit
                                 </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="8" class="text-center py-4 text-gray-500 italic border">No request data found.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-    <div class="text-right text-lg font-semibold text-indigo-700">
-        Total Hours: <span id="total-hours">{{ number_format($totalHours, 1) }}</span>
 
+                                <form method="POST" action="{{ route('request.delete') }}" onsubmit="return confirm('Are you sure you want to delete this request?');">
+                                    @csrf
+                                    <input type="hidden" name="request_id" value="{{ $id }}">
+                                    <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-gray-500 italic border">No request data found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+
+        {{-- Pagination --}}
+        <div class="mt-6">
+            {{ $requests->links() }}
+        </div>
+
+        <div class="text-right text-lg font-semibold text-indigo-700 mt-4">
+            Total Hours: <span id="total-hours">{{ number_format($totalHours, 1) }}</span>
+        </div>
     </div>
 </div>
-
-
-
 
 <!-- Edit Modal -->
 <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">

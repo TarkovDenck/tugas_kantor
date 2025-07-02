@@ -8,27 +8,27 @@
         <!-- User ID -->
         <div>
             <label class="block text-sm font-medium text-gray-600">User ID</label>
-            <input type="text" readonly class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-100" value="{{ Auth::user()->id ?? '12345' }}">
+            <input type="text" readonly class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-100"
+                   value="{{ $userId }}">
         </div>
 
-        <!-- Project Name -->
+        <!-- Project Name (hanya ditampilkan jika ada) -->
+        @if(!empty($profile['project']))
         <div>
             <label class="block text-sm font-medium text-gray-600">Project</label>
-            <input type="text" class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2" placeholder="Enter project name">
+            <input type="text" readonly class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-100"
+                   value="{{ $profile['project'] }}">
         </div>
+        @endif
 
-        <!-- Project ID -->
+        <!-- Project ID (hanya ditampilkan jika ada) -->
+        @if(!empty($profile['project_id']))
         <div>
             <label class="block text-sm font-medium text-gray-600">Project ID</label>
-            <input type="text" class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2" placeholder="Enter project ID">
+            <input type="text" readonly class="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-100"
+                   value="{{ $profile['project_id'] }}">
         </div>
-
-        <!-- Update Button -->
-        <div>
-            <button class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
-                Save Profile
-            </button>
-        </div>
+        @endif
     </div>
 </div>
 @endsection

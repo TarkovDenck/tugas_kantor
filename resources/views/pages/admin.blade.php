@@ -1,23 +1,40 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+use Carbon\Carbon;
+@endphp
+
 <div class="max-w-7xl mx-auto px-4 py-6">
 
     <h2 class="text-2xl font-bold text-gray-700 mb-6">Admin Dashboard</h2>
+
+    {{-- User Filter for Chart --}}
+    <form method="GET" action="{{ route('admindashboard') }}" class="mb-6">
+        <label class="block text-sm font-medium text-gray-600 mb-1">Filter by User</label>
+        <select name="filter_user" onchange="this.form.submit()" class="w-64 border rounded-md px-3 py-2">
+            <option value="">All Users</option>
+            @foreach ($allUsers as $userId)
+                <option value="{{ $userId }}" {{ request('filter_user') == $userId ? 'selected' : '' }}>
+                    {{ $userId }}
+                </option>
+            @endforeach
+        </select>
+    </form>
 
     {{-- Cards Summary --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
             <p class="text-gray-500 text-sm">Total Hours</p>
-            <h3 class="text-3xl font-bold text-indigo-600 mt-2">120</h3>
+            <h3 class="text-3xl font-bold text-indigo-600 mt-2">{{ $totalHours }}</h3>
         </div>
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
             <p class="text-gray-500 text-sm">Total Requests</p>
-            <h3 class="text-3xl font-bold text-green-600 mt-2">45</h3>
+            <h3 class="text-3xl font-bold text-green-600 mt-2">{{ $totalRequests }}</h3>
         </div>
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
             <p class="text-gray-500 text-sm">Total Users</p>
-            <h3 class="text-3xl font-bold text-orange-500 mt-2">10</h3>
+            <h3 class="text-3xl font-bold text-orange-500 mt-2">{{ $totalUsers }}</h3>
         </div>
     </div>
 
@@ -29,7 +46,7 @@
 
     {{-- Data Table --}}
     <div class="bg-white p-6 rounded-lg shadow">
-        <h4 class="text-lg font-semibold mb-4 text-gray-700">Recent Requests</h4>
+        <h4 class="text-lg font-semibold mb-4 text-gray-700">Recent Requests (Today)</h4>
         <table class="w-full table-auto text-left text-sm">
             <thead class="bg-gray-100 text-gray-700">
                 <tr>
@@ -41,21 +58,15 @@
                 </tr>
             </thead>
             <tbody class="text-gray-600">
-                <tr class="border-b">
-                    <td class="px-4 py-2">user123</td>
-                    <td class="px-4 py-2">Incident</td>
-                    <td class="px-4 py-2">2.5</td>
-                    <td class="px-4 py-2">Printer issue</td>
-                    <td class="px-4 py-2">2025-06-14</td>
-                </tr>
-                <tr class="border-b">
-                    <td class="px-4 py-2">user456</td>
-                    <td class="px-4 py-2">Service Request</td>
-                    <td class="px-4 py-2">1</td>
-                    <td class="px-4 py-2">Install software</td>
-                    <td class="px-4 py-2">2025-06-15</td>
-                </tr>
-                <!-- More rows -->
+                @foreach($recentRequests as $req)
+                    <tr class="border-b">
+                        <td class="px-4 py-2">{{ $req['user_id'] }}</td>
+                        <td class="px-4 py-2">{{ $req['request_type'] }}</td>
+                        <td class="px-4 py-2">{{ $req['hours'] }}</td>
+                        <td class="px-4 py-2">{{ $req['note'] }}</td>
+                        <td class="px-4 py-2">{{ Carbon::parse($req['created_at'])->format('Y-m-d') }}</td>
+                    </tr>
+                @endforeach
             </tbody>
         </table>
     </div>
@@ -64,14 +75,13 @@
 {{-- Chart JS CDN --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('requestChart').getContext('2d');
-    const requestChart = new Chart(ctx, {
+    const requestChart = new Chart(document.getElementById('requestChart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: ['Jun 1', 'Jun 2', 'Jun 3', 'Jun 4', 'Jun 5', 'Jun 6', 'Jun 7'],
+            labels: {!! json_encode($chartLabels) !!},
             datasets: [{
-                label: 'Hours per Day',
-                data: [2, 3, 1.5, 4, 2.5, 3, 2],
+                label: 'Total Hours',
+                data: {!! json_encode($chartValues) !!},
                 borderColor: '#6366F1',
                 backgroundColor: 'rgba(99,102,241,0.1)',
                 fill: true,
@@ -80,6 +90,16 @@
         },
         options: {
             responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Total Request Hours Per Day'
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true
